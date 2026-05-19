@@ -213,7 +213,20 @@ def create_app():
     from .config import Config
     app.config.from_object(Config)
 
-    Swagger(app, config={"specs_route": "/api-docs/"}, template=SWAGGER_TEMPLATE)
+    Swagger(app, config={
+    "headers": [],
+    "specs": [
+        {
+            "endpoint": "apispec",
+            "route": "/apispec.json",
+            "rule_filter": lambda rule: True,
+            "model_filter": lambda tag: True,
+        }
+    ],
+    "static_url_path": "/flasgger_static",
+    "swagger_ui": True,
+    "specs_route": "/api-docs/",
+}, template=SWAGGER_TEMPLATE)
 
     app.before_request(log_request)
     app.after_request(log_response)
