@@ -17,14 +17,13 @@ def validate():
     payload = request.get_json() or {}
     pan = payload.get("pan") or payload.get("cardNumber")
     cvv = payload.get("cvv")
-    expiry = payload.get("expiry")
 
-    if not pan or not cvv or not expiry:
+    if not pan or not cvv:
         logger.warning(f"[{request_id}] Validation failed: missing fields")
-        return jsonify({"ok": False, "error": "pan, cvv and expiry are required"}), 400
+        return jsonify({"ok": False, "error": "pan and cvv are required"}), 400
 
     logger.debug(f"[{request_id}] Validating card **** {pan[-4:]}")
-    result = validate_customer(pan, cvv, expiry)
+    result = validate_customer(pan, cvv)
 
     if not result["ok"]:
         logger.warning(f"[{request_id}] Validation failed: {result.get('error')}")
@@ -40,14 +39,11 @@ def charge():
     payload = request.get_json() or {}
     pan = payload.get("pan") or payload.get("cardNumber")
     amount = payload.get("amount")
-    expiry = payload.get("expiry")
 
     if not pan:
         return jsonify({"error": "pan is required"}), 400
     if amount is None:
         return jsonify({"error": "amount is required"}), 400
-    if not expiry:
-        return jsonify({"error": "expiry is required"}), 400
 
     try:
         amount = float(amount)
@@ -62,7 +58,6 @@ def charge():
     result = charge_card(
         pan=str(pan),
         amount=amount,
-        expiry=expiry,
         reference=payload.get("reference"),
         card_holder=payload.get("cardHolder"),
     )

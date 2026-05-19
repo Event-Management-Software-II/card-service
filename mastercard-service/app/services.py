@@ -35,7 +35,7 @@ def validate_expiry(expiry: str) -> tuple[bool, str]:
         return False, "Invalid expiry format, use MM/YY"
 
 
-def validate_customer(pan: str, cvv: str, expiry: str) -> dict:
+def validate_customer(pan: str, cvv: str) -> dict:
     clean = clean_pan(pan)
 
     ok, reason = validate_pan_format(clean)
@@ -45,10 +45,6 @@ def validate_customer(pan: str, cvv: str, expiry: str) -> dict:
     if not str(cvv).isdigit() or len(str(cvv)) not in (3, 4):
         return {"ok": False, "error": "CVV must have 3 or 4 digits"}
 
-    ok, reason = validate_expiry(expiry)
-    if not ok:
-        return {"ok": False, "error": reason}
-
     with get_session() as session:
         card = session.query(Card).filter(Card.pan == clean).first()
         if not card:
@@ -57,8 +53,6 @@ def validate_customer(pan: str, cvv: str, expiry: str) -> dict:
             return {"ok": False, "error": "Card is not active"}
         if card.cvv != str(cvv):
             return {"ok": False, "error": "Invalid CVV"}
-        if card.expiry != expiry.strip():
-            return {"ok": False, "error": "Expiry date does not match"}
 
     return {
         "ok": True,
@@ -70,7 +64,6 @@ def validate_customer(pan: str, cvv: str, expiry: str) -> dict:
 def charge_card(
     pan: str,
     amount: float,
-    expiry: str,
     reference: str | None = None,
     card_holder: str | None = None,
 ) -> dict:
@@ -94,10 +87,6 @@ def charge_card(
             return card_transaction_to_dict(tx)
 
         ok, reason = validate_pan_format(clean)
-        if not ok:
-            return reject(reason)
-
-        ok, reason = validate_expiry(expiry)
         if not ok:
             return reject(reason)
 
