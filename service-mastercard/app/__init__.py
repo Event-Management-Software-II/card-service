@@ -1,10 +1,10 @@
 from flask import Flask
-from sqlalchemy import SQLAlchemy
+from flask_sqlalchemy import SQLAlchemy  # ← fix 1: flask_sqlalchemy, no sqlalchemy
 
 db = SQLAlchemy()
 
 def create_app():
-    app=Flask(__serviceMastercard__)
+    app = Flask(__name__)  # ← fix 2: __name__, no __serviceMastercard__
     
     from .config import Config
     app.config.from_object(Config)
@@ -13,6 +13,7 @@ def create_app():
     
     from .routes import mastercard_bp
     app.register_blueprint(mastercard_bp)
+    
     with app.app_context():
         db.create_all()
         

@@ -1,0 +1,91 @@
+services:
+
+  # ─────────────────────────────────────────
+  # BASE DE DATOS — Visa
+  # ─────────────────────────────────────────
+  #db_visa:
+   # image: postgres:15
+    #container_name: bd_visa
+    #environment:
+     # POSTGRES_USER:     visa_user
+      #POSTGRES_PASSWORD: visa_pass
+      #POSTGRES_DB:       visa_db
+    #ports:
+     # - "5442:5432"       # externo:interno — interno siempre es 5432 en postgres
+    #volumes:
+     # - pgdata_visa:/var/lib/postgresql/data
+    #healthcheck:
+     # test: ["CMD-SHELL", "pg_isready -U visa_user -d visa_db"]
+      #interval: 10s
+      #timeout: 5s
+      #retries: 5
+
+  # ─────────────────────────────────────────
+  # BASE DE DATOS — Mastercard
+  # ─────────────────────────────────────────
+  db_mastercard:
+    image: postgres:15
+    container_name: bd_mastercard
+    environment:
+      POSTGRES_USER:     mc_user
+      POSTGRES_PASSWORD: mc_pass
+      POSTGRES_DB:       mastercard_db
+    ports:
+      - "5442:5432"
+    volumes:
+      - pgdata_mastercard:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mc_user -d mastercard_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────
+  # SERVICIO — Visa
+  # ─────────────────────────────────────────
+  #servicio_visa:
+   # build:
+    #  context: ./service-visa
+     # dockerfile: Dockerfile
+   # container_name: servicio_visa
+    #environment:
+     # FLASK_DEBUG: "true"
+      #FLASK_PORT:  8001
+      #DB_USER:     visa_user
+      #DB_PASSWORD: visa_pass
+      #DB_HOST:     db_visa      # nombre del servicio de BD en la red Docker
+      #DB_PORT:     5432         # interno del contenedor, siempre 5432
+      #DB_NAME:     visa_db
+    #ports:
+     # - "8001:8001"
+    #depends_on:
+      #db_visa:
+       # condition: service_healthy   # espera a que la BD esté lista
+
+  # ─────────────────────────────────────────
+  # SERVICIO — Mastercard
+  # ─────────────────────────────────────────
+  servicio_mastercard:
+    build:
+      context: ./service-mastercard
+      dockerfile: Dockerfile
+    container_name: servicio_mastercard
+    environment:
+      FLASK_DEBUG: "true"
+      FLASK_PORT:  3002
+      DB_USER:     mc_user
+      DB_PASSWORD: mc_pass
+      DB_HOST:     db_mastercard
+      DB_PORT:     5432          # ← interno siempre 5432
+      DB_NAME:     mastercard_db
+    ports:
+      - "3002:3002"
+    depends_on:
+      db_mastercard:
+        condition: service_healthy
+# ─────────────────────────────────────────
+# VOLÚMENES — persisten los datos aunque el contenedor se baje
+# ─────────────────────────────────────────
+volumes:
+  #pgdata_visa:
+  pgdata_mastercard:
