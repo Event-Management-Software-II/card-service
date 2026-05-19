@@ -1,49 +1,72 @@
-from flask import Blueprint, request, jsonify
-from .services import procesar_pago
-from .models import TransaccionMastercard
+from flask import Blueprint, jsonify, request
+
+from .services import charge_card, list_transactions, validate_customer
 
 mastercard_bp = Blueprint("mastercard", __name__)
 
+
 @mastercard_bp.route("/health", methods=["GET"])
 def health():
-    return jsonify({"servicio": "mastercard", "estado": "activo"}), 200
-    
+    return jsonify({"service": "mastercard", "status": "active"}), 200
 
-@mastercard_bp.route("/procesar-pago", methods=["POST"])
-def procesar():
-    datos = request.get_json()
 
-    if not datos:
-        return jsonify({"error": "El cuerpo de la solicitud no puede estar vacío"}), 400
+@mastercard_bp.route("/api/validate", methods=["POST"])
+def validate():
+    payload = request.get_json() or {}
+    pan = payload.get("pan") or payload.get("cardNumber")
+    cvv = payload.get("cvv")
 
-    if "numero_tarjeta" not in datos:
-        return jsonify({"error": "El campo 'numero_tarjeta' es requerido"}), 400
+    if not pan or not cvv:
+        return jsonify({"ok": False, "error": "pan and cvv are required"}), 400
 
-    if "monto" not in datos:
-        return jsonify({"error": "El campo 'monto' es requerido"}), 400
+    result = validate_customer(pan, cvv)
+    if not result["ok"]:
+        return jsonify(result), 422
+
+    return jsonify(result), 200
+
+
+@mastercard_bp.route("/api/charge", methods=["POST"])
+def charge():
+    return process_charge(request.get_json() or {})
+
+
+def process_charge(payload):
+    pan = payload.get("pan") or payload.get("cardNumber")
+    amount = payload.get("amount")
+
+    if not pan:
+        return jsonify({"error": "pan is required"}), 400
+
+    if amount is None:
+        return jsonify({"error": "amount is required"}), 400
 
     try:
-        monto = float(datos["monto"])
+        amount = float(amount)
     except (ValueError, TypeError):
-        return jsonify({"error": "El campo 'monto' debe ser un número válido"}), 400
+        return jsonify({"error": "amount must be a valid number"}), 400
 
-    if monto <= 0:
-        return jsonify({"error": "El monto debe ser mayor a 0"}), 400
+    if amount <= 0:
+        return jsonify({"error": "amount must be greater than 0"}), 400
 
-    try:
-        resultado = procesar_pago(
-            numero_tarjeta=str(datos["numero_tarjeta"]),
-            monto=monto,
-        )
-    except Exception as e:
-        return jsonify({"error": "Error interno al procesar el pago", "detalle": str(e)}), 500
+    result = charge_card(
+        card_number=str(pan),
+        amount=amount,
+        reference=payload.get("reference"),
+        card_holder=payload.get("cardHolder"),
+    )
 
-    if resultado["estado"] == "rechazado":
-        return jsonify(resultado), 422
+    if result["status"] == "rejected":
+        return jsonify(result), 422
 
-    return jsonify(resultado), 201
+    return jsonify(result), 201
 
-@mastercard_bp.route("/transacciones", methods=["GET"])
-def listar_transacciones():
-    transacciones = TransaccionMastercard.query.order_by(TransaccionMastercard.fecha.desc()).all()
-    return jsonify([t.to_dict() for t in transacciones]), 200
+
+@mastercard_bp.route("/process-payment", methods=["POST"])
+def process_payment():
+    return process_charge(request.get_json() or {})
+
+
+@mastercard_bp.route("/transactions", methods=["GET"])
+def transactions():
+    return jsonify(list_transactions()), 200

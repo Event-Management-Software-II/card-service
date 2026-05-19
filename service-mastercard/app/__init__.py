@@ -1,19 +1,17 @@
 from flask import Flask
-from sqlalchemy import SQLAlchemy
 
-db = SQLAlchemy()
+from .prisma_client import connect_db
+
 
 def create_app():
-    app=Flask(__serviceMastercard__)
-    
+    app = Flask(__name__)
+
     from .config import Config
     app.config.from_object(Config)
-    
-    db.init_app(app)
-    
+
+    connect_db()
+
     from .routes import mastercard_bp
     app.register_blueprint(mastercard_bp)
-    with app.app_context():
-        db.create_all()
-        
+
     return app

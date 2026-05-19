@@ -6,7 +6,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
+RUN prisma generate
 
-EXPOSE 3011
+EXPOSE 3002
 
 CMD ["python", "run.py"]

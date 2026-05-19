@@ -1,0 +1,29 @@
+generator client {
+  provider  = "prisma-client-py"
+  interface = "sync"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CardTransactionStatus {
+  approved
+  rejected
+}
+
+model CardTransaction {
+  id              Int                   @id @default(autoincrement())
+  lastFourDigits  String                @db.VarChar(4)
+  amount          Decimal               @db.Decimal(10, 2)
+  status          CardTransactionStatus
+  rejectionReason String?               @db.VarChar(255)
+  reference       String?               @db.VarChar(100)
+  cardHolder      String?               @db.VarChar(100)
+  createdAt       DateTime              @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("card_transactions")
+}
